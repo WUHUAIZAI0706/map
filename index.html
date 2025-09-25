@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式茶の旅遊導覽</title>
+    <style>
+        :root {
+            /* 設定圖片的原始尺寸作為 CSS 變數，用於後續計算 */
+            --base-width: 780;
+            --base-height: 1100;
+        }
+
+        body {
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* 圖片容器：用於定位圖片和按鈕 */
+        .container {
+            position: relative;
+            width: 90vw;
+            height: calc(90vw * (var(--base-height) / var(--base-width)));
+            max-width: var(--base-width)px;
+            max-height: var(--base-height)px;
+            margin: 0 auto;
+        }
+
+        /* 底圖樣式 */
+        .container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* 可點擊色塊按鈕的共同樣式 */
+        .button {
+            position: absolute;
+            background-color: transparent;
+            color: transparent;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            text-decoration: none;
+            font-weight: bold;
+            text-shadow: none;
+        }
+
+        .button:hover {
+            background-color: transparent;
+            color: transparent;
+        }
+        
+        /* 台灣原住民族文化園區 (教育) 按鈕位置與大小 */
+        .btn-edu {
+            width: calc(200 / var(--base-width) * 100%);
+            height: calc(200 / var(--base-height) * 100%);
+            top: calc(40 / var(--base-height) * 100% + 5.75%);
+            left: calc(400 / var(--base-width) * 100%);
+        }
+        
+        /* 彩虹鳳梨田 (藝術) 按鈕位置與大小 */
+        .btn-art {
+            width: calc(200 / var(--base-width) * 100%);
+            height: calc(200 / var(--base-height) * 100%);
+            top: calc(330 / var(--base-height) * 100% + 5.75%);
+            left: calc(310 / var(--base-width) * 100%);
+        }
+        
+        /* 銀獅農莊 (觀光) 按鈕位置與大小 */
+        .btn-sightseeing-1 {
+            width: calc(200 / var(--base-width) * 100%);
+            height: calc(200 / var(--base-height) * 100%);
+            top: calc(460 / var(--base-height) * 100% + 5.75%);
+            left: calc(550 / var(--base-width) * 100%);
+        }
+        
+        /* 觀三元野生茶事業 (觀光) 按鈕位置與大小 */
+        .btn-sightseeing-2 {
+            width: calc(450 / var(--base-width) * 100%);
+            height: calc(450 / var(--base-height) * 100%);
+            top: calc(570 / var(--base-height) * 100% + 5.75%);
+            left: calc(70 / var(--base-width) * 100%);
+        }
+
+        /* 彈出視窗的遮罩層 */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        /* 彈出視窗主體內容 */
+        .popup-content {
+            position: relative;
+            width: 90vw;
+            max-width: 900px;
+            height: 60vh;
+            max-height: 500px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            transform: translateY(-150%);
+            transition: transform 0.5s ease-out;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 彈出視窗顯示時的動畫效果 */
+        .popup-overlay.show .popup-content {
+            transform: translateY(0);
+        }
+
+        /* 彈出視窗的標頭區，包含關閉按鈕 */
+        .popup-header {
+            position: relative;
+            height: 40px;
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 10px;
+        }
+
+        /* 關閉按鈕 */
+        .close-btn {
+            position: absolute;
+            top: 5px;
+            right: 5%;
+            color: black;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1002;
+        }
+        
+        /* 彈出視窗的內容區，可滾動 */
+        .popup-body {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden; /* 隱藏整個 body 的滾動條 */
+        }
+        
+        /* 彈出視窗內的左區圖片 */
+        .popup-left {
+            flex-basis: 50%; /* 圖片區塊約占 50% */
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* 防止圖片溢出 */
+        }
+        .popup-left img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        /* 彈出視窗內的右區文字 */
+        .popup-right {
+            flex-basis: 50%; /* 文字區塊約占 50% */
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            box-sizing: border-box;
+            overflow-y: auto; /* 允許文字區塊獨立滾動 */
+            position: relative;
+        }
+        .popup-right h3 {
+            color: #0056b3;
+            margin-top: 0;
+            font-size: 18px;
+            position: relative;
+            display: inline-block;
+            margin-right: 30px;
+        }
+        .popup-right h4 {
+            color: #555;
+            margin: 15px 0 5px;
+            font-size: 16px;
+        }
+        .popup-right p {
+            margin-bottom: 10px;
+        }
+        .popup-right ul {
+            padding-left: 20px;
+            margin-top: 5px;
+        }
+        .popup-right li {
+            margin-bottom: 5px;
+        }
+
+        /* 喇叭按鈕樣式 */
+        .speaker-btn {
+            cursor: pointer;
+            font-size: 20px;
+            color: black;
+            transition: color 0.3s ease;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .speaker-btn.playing {
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <img src="https://meee.com.tw/8MAfqKc.jpg" alt="茶の旅遊導覽圖">
+
+        <a href="#" class="button btn-edu" data-target="content-edu">教育</a>
+        <a href="#" class="button btn-art" data-target="content-art">藝術</a>
+        <a href="#" class="button btn-sightseeing-1" data-target="content-sightseeing-1">觀光</a>
+        <a href="#" class="button btn-sightseeing-2" data-target="content-sightseeing-2">觀光</a>
+    </div>
+
+    <div id="popup-overlay" class="popup-overlay">
+        <div class="popup-content">
+            <div class="popup-header">
+                <span class="close-btn">&times;</span>
+            </div>
+            <div class="popup-body" id="popup-body-container">
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const overlay = document.getElementById('popup-overlay');
+        const closeBtn = document.querySelector('.close-btn');
+        const buttons = document.querySelectorAll('.button');
+        const popupBodyContainer = document.getElementById('popup-body-container');
+        
+        let audio = new Audio();
+        let currentPlayingButton = null;
+        let currentAudioSrc = null;
+
+        // 彈窗內容的資料庫，以 key-value 形式儲存
+        const popupContentData = {
+            'content-edu': {
+                html: `
+                    <div class="popup-left">
+                        <img src="https://meee.com.tw/NsMz3qM.jpg" alt="教育內容圖片">
+                    </div>
+                    <div class="popup-right">
+                        <h3>走進文化，感受原民之美</h3>
+                        <h4>【園區介紹】</h4>
+                        <p>探索台灣原住民族文化的寶庫，完整呈現各族群的傳統建築、生活方式與文化精髓。</p>
+                        <ul>
+                            <li>🥁各族群展區：阿美族、排灣族、泰雅族等，每個族群都有專屬建築與生活場景。</li>
+                            <li>🥁傳統建築：參觀獨特的木構建築、屋頂與雕刻藝術。</li>
+                            <li>🥁教育活動：介紹原住民歷史、文化及生活方式導覽。</li>
+                        </ul>
+                        <p>看見、聽見、感受及體驗</p>
+                        <h4>【活動體驗】</h4>
+                        <p>親身參與、互動學習，感受原住民文化的活力與魅力。</p>
+                        <ul>
+                            <li>🪶表演體驗：傳統歌舞、樂器演奏、祭典表演</li>
+                            <li>🪶互動體驗：穿著傳統服飾拍照、參與生活技能學習</li>
+                            <li>🪶手作工藝：編織、陶藝、雕刻，動手體驗文化工藝</li>
+                            <li>🪶親子活動：寓教於樂，孩子也能參與的文化遊戲與課程</li>
+                            <li>🪶教育課程：學校團體的校外教學、文化導覽與工作坊</li>
+                        </ul>
+                        <h4>【聯絡我們】</h4>
+                        <p>📍屏東縣瑪家鄉風景104號</p>
+                        <p>☎️ (08)7991219</p>
+                    </div>
+                `,
+                audioSrc: "https://raw.githubusercontent.com/WUHUAIZAI0706/soundtest/main/原住民.mp3"
+            },
+            'content-art': {
+                html: `
+                    <div class="popup-left">
+                        <img src="https://meee.com.tw/t0XsCN6.jpg" alt="藝術內容圖片">
+                    </div>
+                    <div class="popup-right">
+                        <h3>🌈在彩虹下，品味大地的甜</h3>
+                        <p>在屏東的陽光下，有一片色彩斑斕的鳳梨田，彷彿彩虹落在了大地上。農夫巧手替鳳梨戴上彩帽，將鄉村田間變成繽紛花海，走進田間小徑，陽光灑在金黃與綠意交錯的鳳梨葉上，像踏進一幅生動的畫作。</p>
+                        <h4>🌈彩虹田裡的每一步都是幸福</h4>
+                        <p>這裡不只是拍照打卡的夢幻場景，更能親手體驗採摘鳳梨的樂趣，感受農作的溫度與大地的饋贈。無論是親子同遊，或是情侶漫步，彩虹鳳梨田都會讓您的每一張照片、每一次呼吸，都充滿自然的甜蜜與創意驚喜。</p>
+                        <h4>【產品介紹】</h4>
+                        <ul>
+                            <li>🍍芒果鳳梨：果實小巧、果肉帶淡淡芒果香。</li>
+                            <li>🍍金鑽鳳梨：果實大、果肉香甜多汁。</li>
+                        </ul>
+                        <h4>【活動產季與採收時間】</h4>
+                        <ul>
+                            <li>📌鳳梨彩帽活動季節：每年 2月中～5月底，彩帽田隨鳳梨生長進行季節限定展示。</li>
+                            <li>📌採收時間：活動結束後進入採收期，約 5月底開始採收，鮮甜鳳梨可於當地農特產品市集購買。</li>
+                        </ul>
+                        <h4>【聯絡我們】</h4>
+                        <p>📍屏東縣高樹鄉沿山公路</p>
+                        <p>☎️ 0933911949</p>
+                    </div>
+                `,
+                audioSrc: "https://raw.githubusercontent.com/WUHUAIZAI0706/soundtest/main/鳳梨.mp3"
+            },
+            'content-sightseeing-1': {
+                html: `
+                    <div class="popup-left">
+                        <img src="https://meee.com.tw/4UQj19Y.jpg" alt="觀光內容圖片1">
+                    </div>
+                    <div class="popup-right">
+                        <h3>傳承三代，守護每一口甘甜。</h3>
+                        <p>「銀獅農莊」源自創辦人洪華進先生對父親的感念，與土地相依的精神，成為農場延續至今的根基。到了第三代，洪銘聰先生毅然返鄉，承接家族事業，將現代科技導入傳統農法，讓鳳梨的耕作在自然與科學之間找到平衡。</p>
+                        <p>自然孕育的甘甜，用心傳遞。</p>
+                        <h4>【產品介紹】🍍銀獅金鑽鳳梨（台農17號）🍍</h4>
+                        <p>在銀獅農場，每一顆金鑽鳳梨都遵循自然法則，不施農藥，不過度干預。從採苗、種植、澆水、除草，全由人工細心完成，經過紅土環境的滋養，果肉細緻多汁，香氣濃郁。每顆鳳梨都擁有吉園圃認證與生產履歷，讓消費者買得放心、吃得安心。</p>
+                        <h4>【產季與產地】</h4>
+                        <ul>
+                            <li>📌產季：每年 3 月至 5 月中下旬</li>
+                            <li>📌產地：屏東縣高樹鄉沿山公路三段29號</li>
+                        </ul>
+                        <h4>【認證與榮譽】</h4>
+                        <ul>
+                            <li>🏆屏東縣優質金鑽鳳梨評鑑冠軍</li>
+                            <li>🏆吉園圃認證及生產履歷</li>
+                            <li>🏆格々農品鳳梨果茶醬指定原料</li>
+                        </ul>
+                        <h4>【聯絡我們】</h4>
+                        <p>📍屏東縣高樹鄉沿山公路三段29號</p>
+                        <p>☎️ 0933911949</p>
+                        <p>🔍 Facebook：<a href="https://www.facebook.com/silverlion626/" target="_blank">銀獅農莊</a></p>
+                    </div>
+                `,
+                audioSrc: "https://raw.githubusercontent.com/WUHUAIZAI0706/soundtest/main/銀獅.mp3"
+            },
+            'content-sightseeing-2': {
+                html: `
+                    <div class="popup-left">
+                        <img src="https://meee.com.tw/UbGD7uM.jpg" alt="觀光內容圖片2">
+                    </div>
+                    <div class="popup-right">
+                        <h3>在屏東三地門的山林裡，藏著一份對茶的執著。</h3>
+                        <p>初識野生茶，是一份偶然；推廣野生茶，卻是一份決心。觀三元創辦人何文山，選擇放下總舖師的熱鬧舞台，走進山林，期許能讓這片珍貴的野生茶被更多人看見，他始終相信「茶不是商業的距離，而是朋友的溫度。」</p>
+                        <p>野生茶的生長環境無農藥、無人工干預，依循自然的節奏，在群山環抱間，野生茶靜待四季，一年僅一次採收，錯過，就要再等一年。觀三元堅持保留這份純粹，讓每一片茶葉都承載環境永續的責任與森林的氣息。</p>
+                        <p>一壺茶，喝的是自然，感受的是初心。</p>
+                        <p>何文山先生堅持以炭火手炒，將古法與自然融合，注重透明的製程與品質把關，讓日曬的溫度、炭火的香氣、山林的清風，都融入茶湯之中，還原茶最純粹的原味。</p>
+                        <h4>【觀三元產品系列】</h4>
+                        <ul>
+                            <li>🌱圓子系列｜紅花子、月仙、青龍圓子</li>
+                            <li>🌱散裝系列｜金芙蓉、原始風味</li>
+                            <li>🌱茶膏系列｜問世茶膏</li>
+                        </ul>
+                        <h4>【活動體驗】</h4>
+                        <ul>
+                            <li>🫖氵延茶知｜專業招待所、茶道體驗</li>
+                        </ul>
+                        <h4>【聯絡我們】</h4>
+                        <p>📍屏東縣三地門鄉民族巷100-4號</p>
+                        <p>☎️0929569086</p>
+                        <p>🔍 Facebook：觀三元野生茶事業</p>
+                    </div>
+                `,
+                audioSrc: "https://raw.githubusercontent.com/WUHUAIZAI0706/soundtest/main/觀光.mp3"
+            }
+        };
+
+        // 停止所有音檔播放
+        function stopAllAudio() {
+            if (audio) {
+                audio.pause();
+                audio.currentTime = 0;
+            }
+            if (currentPlayingButton) {
+                currentPlayingButton.classList.remove('playing');
+                currentPlayingButton.innerHTML = '&#128266;'; // 重置為喇叭圖示
+                currentPlayingButton = null;
+                currentAudioSrc = null;
+            }
+        }
+        
+        // 點擊按鈕時
+        buttons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                stopAllAudio(); // 在打開新彈窗時停止所有音檔
+
+                const targetId = button.getAttribute('data-target');
+                const content = popupContentData[targetId];
+
+                if (content) {
+                    // 直接從資料庫獲取內容並注入
+                    popupBodyContainer.innerHTML = content.html;
+
+                    // 創建喇叭按鈕
+                    const speakerBtn = document.createElement('span');
+                    speakerBtn.className = 'speaker-btn';
+                    speakerBtn.innerHTML = '&#128266;'; // 喇叭圖示
+
+                    // 將喇叭按鈕插入到複製內容的右側文字區
+                    const popupRight = popupBodyContainer.querySelector('.popup-right');
+                    if (popupRight) {
+                        popupRight.appendChild(speakerBtn);
+                    }
+
+                    // 處理音檔播放邏輯，必須在按鈕被加入 DOM 後再綁定事件
+                    const newSpeakerBtn = popupBodyContainer.querySelector('.speaker-btn');
+                    if (newSpeakerBtn) {
+                        newSpeakerBtn.addEventListener('click', () => {
+                            // 修正後的判斷邏輯，使用變數來比對
+                            if (currentAudioSrc === content.audioSrc && !audio.paused) {
+                                // 如果是當前正在播放的音檔，則暫停
+                                audio.pause();
+                                newSpeakerBtn.classList.remove('playing');
+                                newSpeakerBtn.innerHTML = '&#128266;'; // 換成喇叭圖示
+                                currentPlayingButton = null;
+                                currentAudioSrc = null;
+                            } else {
+                                // 停止所有正在播放的音檔
+                                stopAllAudio();
+                                // 播放新的音檔
+                                audio.src = content.audioSrc;
+                                audio.play();
+                                newSpeakerBtn.classList.add('playing');
+                                newSpeakerBtn.innerHTML = '&#9208;&#65039;'; // 換成暫停圖示
+                                currentPlayingButton = newSpeakerBtn;
+                                currentAudioSrc = content.audioSrc;
+                            }
+                        });
+                    }
+
+                    // 音檔播放結束時重置按鈕樣式
+                    audio.onended = () => {
+                        if (currentPlayingButton) {
+                            currentPlayingButton.classList.remove('playing');
+                            currentPlayingButton.innerHTML = '&#128266;'; // 換成喇叭圖示
+                        }
+                        currentPlayingButton = null;
+                        currentAudioSrc = null;
+                    };
+
+                    // 顯示遮罩和彈出視窗
+                    overlay.style.display = 'flex';
+                    setTimeout(() => {
+                        overlay.classList.add('show');
+                    }, 10);
+                }
+            });
+        });
+
+        // 點擊關閉按鈕時
+        closeBtn.addEventListener('click', () => {
+            stopAllAudio(); // 關閉彈窗時停止音檔
+            overlay.classList.remove('show');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                popupBodyContainer.innerHTML = ''; // 關閉時清空內容
+            }, 500);
+        });
+    </script>
+
+</body>
+</html>
